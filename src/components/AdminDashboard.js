@@ -2,17 +2,17 @@ import React, { useState, useEffect } from "react";
 import { FaUsers, FaBullhorn, FaPlus, FaEdit, FaTrash, FaSignOutAlt } from "react-icons/fa";
 import axios from "axios";
 import { Admin_url } from './Service';
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 const AdminDashboard = () => {
     const navigate = useNavigate();
-    
+
     // State Hooks for managing donors, campaigns, and modal visibility
     const [donors, setDonors] = useState([]);
     const [campaigns, setCampaigns] = useState([]);
-    const [newDonor, setNewDonor] = useState({ username: "", email: "" , password:""});
+    const [newDonor, setNewDonor] = useState({ username: "", email: "", password: "" });
     const [editDonor, setEditDonor] = useState(null);
-    const [newCampaign, setNewCampaign] = useState({ name: "", description: "" ,startDate: "", endDate: "" });
+    const [newCampaign, setNewCampaign] = useState({ name: "", description: "", startDate: "", endDate: "", image: null, });
     const [editCampaign, setEditCampaign] = useState(null);
 
     // Modal State
@@ -84,11 +84,21 @@ const AdminDashboard = () => {
             console.error("Error deleting donor:", error);
         }
     };
-
     // Add Campaign
     const handleAddCampaign = async () => {
+        const formData = new FormData();
+        formData.append("name", newCampaign.name);
+        formData.append("description", newCampaign.description);
+        formData.append("startDate", newCampaign.startDate);
+        formData.append("endDate", newCampaign.endDate);
+        if (newCampaign.image) formData.append("image", newCampaign.image);
+
         try {
-            const response = await axios.post(`${Admin_url}/campaign`, newCampaign);
+            const response = await axios.post(`${Admin_url}/campaign`, formData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                },
+            });
             setCampaigns([...campaigns, response.data]);
             setShowAddCampaignModal(false);
             alert("Campaign added successfully!");
@@ -97,10 +107,23 @@ const AdminDashboard = () => {
         }
     };
 
+
     // Edit Campaign
     const handleEditCampaign = async () => {
         try {
-            const response = await axios.put(`/api/campaigns/${editCampaign.id}`, editCampaign);
+            const formData = new FormData();
+            formData.append('name', editCampaign.name);
+            formData.append('description', editCampaign.description);
+            formData.append('startDate', editCampaign.startDate);
+            formData.append('endDate', editCampaign.endDate);
+            formData.append('image', editCampaign.image); // Assuming it's a file input
+    
+            const response = await axios.put(`${Admin_url}/campaign/${editCampaign.id}`, formData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                },
+            });
+    
             setCampaigns(campaigns.map(c => (c.id === editCampaign.id ? response.data : c)));
             setShowEditCampaignModal(false);
             alert("Campaign updated successfully!");
@@ -108,6 +131,7 @@ const AdminDashboard = () => {
             console.error("Error editing campaign:", error);
         }
     };
+    
 
     // Delete Campaign
     const handleDeleteCampaign = async (id) => {
@@ -183,7 +207,7 @@ const AdminDashboard = () => {
                                         <td>{donor.username}</td>
                                         <td>{donor.email}</td>
                                         <td>{donor.password}</td>
-                                
+
                                         <td>
                                             <button
                                                 className="btn btn-sm btn-warning me-2"
@@ -221,10 +245,58 @@ const AdminDashboard = () => {
                             {campaigns.map((campaign, index) => (
                                 <div key={index} className="col-md-4 mb-4">
                                     <div className="card">
-                                        <div className="card-header bg-primary text-white">
-                                            Campaign #{campaign.id}
-                                        </div>
+                                        {/* Display Image on top */}
+                                        {campaign.image ? (
+                                            typeof campaign.image === "string" ? (
+                                                <img
+                                                    src={
+                                                        campaign.image.startsWith("data:") || campaign.image.startsWith("http")
+                                                            ? campaign.image
+                                                            : `data:image/jpeg;base64,${campaign.image}`
+                                                    }
+                                                    alt={campaign.name}
+                                                    className="card-img-top"
+                                                    style={{ maxHeight: "200px", objectFit: "cover" }}
+                                                />
+                                            ) : campaign.image instanceof Blob ? (
+                                                <img
+                                                    src={URL.createObjectURL(campaign.image)}
+                                                    alt={campaign.name}
+                                                    className="card-img-top"
+                                                    style={{ maxHeight: "200px", objectFit: "cover" }}
+                                                />
+                                            ) : (
+                                                <div
+                                                    style={{
+                                                        height: "200px",
+                                                        backgroundColor: "#f0f0f0",
+                                                        display: "flex",
+                                                        justifyContent: "center",
+                                                        alignItems: "center",
+                                                    }}
+                                                >
+                                                    Invalid Image Format
+                                                </div>
+                                            )
+                                        ) : (
+                                            <div
+                                                style={{
+                                                    height: "200px",
+                                                    backgroundColor: "#f0f0f0",
+                                                    display: "flex",
+                                                    justifyContent: "center",
+                                                    alignItems: "center",
+                                                }}
+                                            >
+                                                No Image Available
+                                            </div>
+                                        )}
+
+                                        {/* Card Content */}
                                         <div className="card-body">
+                                            <div className="card-header bg-primary text-white">
+                                                Campaign #{campaign.id}
+                                            </div>
                                             <h5 className="card-name">{campaign.name}</h5>
                                             <p className="card-text">{campaign.description}</p>
                                             <p className="card-text">
@@ -257,8 +329,9 @@ const AdminDashboard = () => {
                                 </div>
                             ))}
                         </div>
-                  </section>
+                    </section>
                 )}
+
             </div>
 
             {/* Add Donor Modal */}
@@ -364,7 +437,8 @@ const AdminDashboard = () => {
                     </div>
                 </div>
             )}
-            
+
+            {/* Add Campaign Modal */}
             {/* Add Campaign Modal */}
             {showAddCampaignModal && (
                 <div className="modal show d-block">
@@ -407,6 +481,11 @@ const AdminDashboard = () => {
                                     value={newCampaign.endDate}
                                     onChange={(e) => setNewCampaign({ ...newCampaign, endDate: e.target.value })}
                                 />
+                                <input
+                                    type="file"
+                                    className="form-control mb-2"
+                                    onChange={(e) => setNewCampaign({ ...newCampaign, image: e.target.files[0] })}
+                                />
                             </div>
                             <div className="modal-footer">
                                 <button
@@ -424,6 +503,8 @@ const AdminDashboard = () => {
                 </div>
             )}
 
+
+            {/* Edit Campaign Modal */}
             {/* Edit Campaign Modal */}
             {showEditCampaignModal && (
                 <div className="modal show d-block">
@@ -465,6 +546,11 @@ const AdminDashboard = () => {
                                     value={editCampaign?.endDate || ""}
                                     onChange={(e) => setEditCampaign({ ...editCampaign, endDate: e.target.value })}
                                 />
+                                <input
+                                    type="file"
+                                    className="form-control mb-2"
+                                    onChange={(e) => setEditCampaign({ ...editCampaign, image: e.target.files[0] })}
+                                />
                             </div>
                             <div className="modal-footer">
                                 <button
@@ -481,6 +567,7 @@ const AdminDashboard = () => {
                     </div>
                 </div>
             )}
+
         </div>
     );
 };
