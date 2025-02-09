@@ -9,14 +9,33 @@ const Campaigns = () => {
 
   useEffect(() => {
     axios
-      .get(`${Admin_url}/campaigns`) // Replace with your actual API endpoint
+      .get(`${Admin_url}/campaigns`)
       .then((response) => {
-        setCampaigns(response.data);
+        const updatedCampaigns = response.data.map((campaign) => ({
+          ...campaign,
+          completed: campaign.donatedAmount >= campaign.targetAmount,
+        }));
+
+        console.log("Updated Campaigns:", updatedCampaigns);
+        setCampaigns(updatedCampaigns);
       })
       .catch((error) => {
         console.error('Error fetching campaigns:', error);
       });
   }, []);
+
+  // ✅ Function to update campaigns after a successful donation
+  const updateCampaigns = (updatedCampaign) => {
+    setCampaigns((prevCampaigns) =>
+      prevCampaigns.map((c) =>
+        c.id === updatedCampaign.id ? updatedCampaign : c
+      )
+    );
+  };
+
+  // ✅ Separate completed and active campaigns
+  const completedCampaigns = campaigns.filter(c => c.completed);
+  const activeCampaigns = campaigns.filter(c => !c.completed);
 
   return (
     <div>
@@ -76,6 +95,7 @@ const Campaigns = () => {
               padding: 16px;
               background: white;
               border-bottom: 1px solid #f0f0f0;
+              position: relative; 
             }
 
             .campaign-card-header h3 {
@@ -83,6 +103,17 @@ const Campaigns = () => {
               font-size: 1.25rem;
               font-weight: 600;
               color: #1a1a1a;
+            }
+
+            .completed-badge {
+              position: absolute;
+              top: 30px;
+              right: 10px;
+              background-color: rgb(244, 110, 27);
+              color: white;
+              padding: 5px 10px;
+              border-radius: 5px;
+              font-size: 14px;
             }
 
             .campaign-card-body {
@@ -139,88 +170,82 @@ const Campaigns = () => {
             .btn-donate:hover {
               opacity: 0.9;
             }
+
+            .btn-disabled {
+              background: #ccc !important;
+              cursor: not-allowed;
+            }
           `}
         </style>
         <h2 className="text-center mb-4">Active Campaigns</h2>
         <div className="scrollable-container">
           <div className="campaign-container">
-            {campaigns.length === 0 ? (
-              <p className="text-center">No campaigns available</p>
-            ) : (
-              campaigns.map((campaign) => {
-                let mimeType = "image/jpeg";
-                const imageData = campaign.image;
+            {[...completedCampaigns, ...activeCampaigns].map((campaign) => {
+              let mimeType = "image/jpeg";
+              const imageData = campaign.image;
 
-                if (imageData) {
-                  if (imageData.startsWith("/9j/")) {
-                    mimeType = "image/jpeg";
-                  } else if (imageData.startsWith("iVBORw0KGgo")) {
-                    mimeType = "image/png";
-                  }
+              if (imageData) {
+                if (imageData.startsWith("/9j/")) {
+                  mimeType = "image/jpeg";
+                } else if (imageData.startsWith("iVBORw0KGgo")) {
+                  mimeType = "image/png";
                 }
+              }
 
-                const imageUrl = imageData
-                  ? `data:${mimeType};base64,${imageData}`
-                  : "https://via.placeholder.com/300x200";
+              const imageUrl = imageData
+                ? `data:${mimeType};base64,${imageData}`
+                : "https://via.placeholder.com/300x200";
 
-                return (
-                  <div className="campaign-card" key={campaign.id}>
-                    <div className="image-container">
-                      <img
-                        src={imageUrl}
-                        alt={campaign.name}
-                        className="campaign-banner"
-                      />
+              return (
+                <div
+                  className={`campaign-card ${campaign.completed ? "fixed" : ""}`}
+                  key={campaign.id}
+                >
+                  <div className="image-container">
+                    <img
+                      src={imageUrl}
+                      alt={campaign.name}
+                      className="campaign-banner"
+                    />
+                  </div>
+                  <div className="campaign-card-header">
+                    {campaign.completed && <div className="completed-badge">Completed</div>}
+                    <h3>{campaign.name}</h3>
+                  </div>
+                  <div className="campaign-card-body">
+                    <div className="campaign-info">
+                      <span>
+                        <strong>Start Date:</strong>{" "}
+                        {new Date(campaign.startDate).toLocaleDateString()}
+                      </span>
+                      <span>
+                        <strong>End Date:</strong>{" "}
+                        {new Date(campaign.endDate).toLocaleDateString()}
+                      </span>
                     </div>
-                    <div className="campaign-card-header">
-                      <h3>{campaign.name}</h3>
-                    </div>
-                    <div className="campaign-card-body">
-                      <div className="campaign-info">
-                        <span>
-                          <strong>Start Date:</strong>{" "}
-                          {new Date(campaign.startDate).toLocaleDateString()}
-                        </span>
-                        <span>
-                          <strong>End Date:</strong>{" "}
-                          {new Date(campaign.endDate).toLocaleDateString()}
-                        </span>
+                    <div className="progress-container">
+                      <div className="progress-bar">
+                        <div
+                          className="progress-fill"
+                          style={{
+                            width: `${(campaign.donatedAmount / campaign.targetAmount) * 100}%`,
+                          }}
+                        ></div>
                       </div>
-                      <div className="progress-container">
-                        <div className="progress-bar">
-                          <div
-                            className="progress-fill"
-                            style={{
-                              width: `${(campaign.donatedAmount /
-                                campaign.targetAmount) *
-                                100}%`,
-                            }}
-                          ></div>
-                        </div>
-                      </div>
-                      <div className="campaign-info">
-                        <span>Donation Progress</span>
-                        <span>
-                          {Math.round(
-                            (campaign.donatedAmount / campaign.targetAmount) *
-                              100
-                          )}
-                          %
-                        </span>
-                      </div>
-                    </div>
-                    <div className="campaign-card-footer">
-                      <button
-                        className="btn-donate"
-                        onClick={() => setSelectedCampaign(campaign)}
-                      >
-                        Donate Now
-                      </button>
                     </div>
                   </div>
-                );
-              })
-            )}
+                  <div className="campaign-card-footer">
+                    <button
+                      className={`btn-donate ${campaign.completed ? "btn-disabled" : ""}`}
+                      onClick={() => !campaign.completed && setSelectedCampaign(campaign)}
+                      disabled={campaign.completed}
+                    >
+                      {campaign.completed ? "Donation Closed" : "Donate Now"}
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       </div>
@@ -228,6 +253,7 @@ const Campaigns = () => {
         <DonateForm
           campaign={selectedCampaign}
           onClose={() => setSelectedCampaign(null)}
+          onDonateSuccess={updateCampaigns}
         />
       )}
     </div>

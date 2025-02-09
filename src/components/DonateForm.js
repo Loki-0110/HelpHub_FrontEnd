@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { Modal, Button, Form, InputGroup, Image } from 'react-bootstrap';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faDonate, faCreditCard, faRupeeSign, faTimes } from '@fortawesome/free-solid-svg-icons';
+import { faDonate, faCreditCard, faRupeeSign } from '@fortawesome/free-solid-svg-icons';
+import { motion } from 'framer-motion';
 import image from '../images/image.png';
 
-const DonateForm = ({ campaign, onClose }) => {
+const DonateForm = ({ campaign, onClose, onDonateSuccess }) => {
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
@@ -24,90 +25,49 @@ const DonateForm = ({ campaign, onClose }) => {
     });
   };
 
-  const handleDonate = () => {
-    console.log('Donation Details:', formData);
-    setDonationStatus('Thank you for your donation!');
-    setTimeout(onClose, 2000);
+  const handleDonate = async () => {
+    try {
+      const response = await fetch('http://localhost:2021/api/donations/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData),
+      });
+
+      if (response.ok) {
+        const newDonatedAmount = campaign.donatedAmount + parseFloat(formData.amount);
+        const updatedCampaign = {
+          ...campaign,
+          donatedAmount: newDonatedAmount,
+          completed: true, // ✅ Always mark as completed immediately on donation
+        };
+
+        if (onDonateSuccess) {
+          onDonateSuccess(updatedCampaign); // ✅ Notify parent component to update UI
+        }
+
+        setTimeout(onClose, 2000);
+      } else {
+        setDonationStatus('⚠️ Failed to process donation. Please try again.');
+      }
+    } catch (error) {
+      setDonationStatus('❌ Error connecting to the server.');
+      console.error('Donation Error:', error);
+    }
   };
 
-  const styles = {
-    modalContent: {
-      borderRadius: '15px',
-      boxShadow: '0 4px 20px rgba(0, 0, 0, 0.2)',
-      animation: 'fadeIn 0.3s ease-in-out',
-    },
-    donateButton: {
-      transition: 'background-color 0.3s ease-in-out, transform 0.2s',
-      backgroundColor: '#28a745',
-      border: 'none',
-      color: 'white',
-      boxShadow: '0px 4px 12px rgba(0, 0, 0, 0.15)',
-    },
-    donateButtonHover: {
-      backgroundColor: '#218838',
-      transform: 'scale(1.1)',
-    },
-    modalHeader: {
-      background: 'linear-gradient(135deg, #6f42c1, #e83e8c)',
-      color: 'white',
-      borderTopLeftRadius: '15px',
-      borderTopRightRadius: '15px',
-      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)',
-      animation: 'slideIn 0.3s ease-in-out',
-    },
-    modalBody: {
-      padding: '30px',
-      backgroundColor: '#f9f9f9',
-      borderRadius: '15px',
-      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
-    },
-    impactImage: {
-      width: '80%',
-      height: 'auto',
-      marginTop: '10px',
-      marginBottom: '20px',
-      transition: 'transform 0.3s ease-in-out',
-    },
-    impactImageHover: {
-      transform: 'scale(1.05)',
-    },
-    recurringOption: {
-      marginTop: '10px',
-    },
-    socialButton: {
-      marginTop: '20px',
-      backgroundColor: '#3b5998',
-      color: 'white',
-      boxShadow: '0 4px 10px rgba(0, 0, 0, 0.2)',
-    },
-    progressBar: {
-      height: '20px',
-      backgroundColor: '#f0f0f0',
-      borderRadius: '10px',
-      marginTop: '20px',
-    },
-    progress: {
-      height: '100%',
-      width: '50%',
-      backgroundColor: '#28a745',
-      borderRadius: '10px',
-    },
-    formControl: {
-      transition: 'border-color 0.3s ease-in-out',
-    },
-    formControlFocus: {
-      borderColor: '#28a745',
-      boxShadow: '0 0 5px rgba(40, 167, 69, 0.5)',
-    },
-  };
+  
 
   return (
-    <Modal show={true} onHide={onClose} centered style={styles.fadeIn}>
-      <Modal.Header closeButton style={styles.modalHeader}>
-        <Modal.Title>
-          <FontAwesomeIcon icon={faDonate} className="text-light" /> Donate to {campaign?.name}
-        </Modal.Title>
+    <Modal show={true} onHide={onClose} centered>
+      {/* Animated Header */}
+      <Modal.Header style={styles.modalHeader} closeButton>
+        <motion.div initial={{ opacity: 0, y: -30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
+          <Modal.Title>
+            <FontAwesomeIcon icon={faDonate} style={styles.iconTitle} /> Donate to {campaign?.name}
+          </Modal.Title>
+        </motion.div>
       </Modal.Header>
+
       <Modal.Body style={styles.modalBody}>
         {campaign && (
           <>
@@ -117,136 +77,134 @@ const DonateForm = ({ campaign, onClose }) => {
           </>
         )}
 
-        {/* Suggested Donation Amounts */}
         <h5>Suggested Donation Amounts</h5>
-        <Button variant="outline-success" onClick={() => setFormData({ ...formData, amount: '500' })}>₹500</Button>
-        <Button variant="outline-success" onClick={() => setFormData({ ...formData, amount: '1000' })}>₹1000</Button>
-        <Button variant="outline-success" onClick={() => setFormData({ ...formData, amount: '5000' })}>₹5000</Button>
-
-        {/* Donation Progress */}
-        <div style={styles.progressBar}>
-          <div style={styles.progress}></div>
+        <div style={styles.amountButtons}>
+          {[500, 1000, 5000].map((amt) => (
+            <motion.button
+              key={amt}
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+              className="btn btn-outline-success"
+              style={styles.amountButton}
+              onClick={() => setFormData({ ...formData, amount: amt.toString() })}
+            >
+              ₹{amt}
+            </motion.button>
+          ))}
         </div>
 
-        {/* Impact Visual */}
         <h5>Impact of Your Donation</h5>
-        <Image
-          src={image}
-          alt="Impact Image"
-          style={styles.impactImage}
-          onMouseEnter={(e) => e.target.style.transform = styles.impactImageHover.transform}
-          onMouseLeave={(e) => e.target.style.transform = 'none'}
-        />
+        <Image src={image} style={styles.image} />
 
-        {/* Donation Form */}
-        <Form>
-          <Form.Group controlId="name">
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }}>
+          <Form.Group style={styles.formGroup}>
             <Form.Label>Name</Form.Label>
-            <Form.Control
-              type="text"
-              placeholder="Enter your name"
-              name="name"
-              value={formData.name}
-              onChange={handleChange}
-              style={styles.formControl}
-              onFocus={(e) => e.target.style = styles.formControlFocus}
-            />
+            <Form.Control type="text" name="name" value={formData.name} onChange={handleChange} required />
           </Form.Group>
 
-          <Form.Group controlId="phone">
+          <Form.Group style={styles.formGroup}>
             <Form.Label>Phone Number</Form.Label>
-            <Form.Control
-              type="text"
-              placeholder="Enter your phone number"
-              name="phone"
-              value={formData.phone}
-              onChange={handleChange}
-              style={styles.formControl}
-              onFocus={(e) => e.target.style = styles.formControlFocus}
-            />
+            <Form.Control type="text" name="phone" value={formData.phone} onChange={handleChange} required />
           </Form.Group>
 
-          <Form.Group controlId="paymentMethod">
-            <Form.Label>Payment Method</Form.Label>
-            <InputGroup>
-              <InputGroup.Text>
-                <FontAwesomeIcon icon={faCreditCard} />
-              </InputGroup.Text>
-              <Form.Control as="select" name="paymentMethod" value={formData.paymentMethod} onChange={handleChange}>
-                <option value="">Select a payment method</option>
-                <option value="creditCard">Credit Card</option>
-                <option value="debitCard">Debit Card</option>
-                <option value="paypal">PayPal</option>
-                <option value="upi">UPI</option>
-              </Form.Control>
-            </InputGroup>
-          </Form.Group>
-
-          <Form.Group controlId="amount">
+          <Form.Group style={styles.formGroup}>
             <Form.Label>Donation Amount</Form.Label>
             <InputGroup>
-              <InputGroup.Text>
-                <FontAwesomeIcon icon={faRupeeSign} />
-              </InputGroup.Text>
-              <Form.Control
-                type="number"
-                placeholder="Enter donation amount"
-                name="amount"
-                value={formData.amount}
-                onChange={handleChange}
-              />
+              <InputGroup.Text><FontAwesomeIcon icon={faRupeeSign} /></InputGroup.Text>
+              <Form.Control type="number" name="amount" value={formData.amount} onChange={handleChange} required />
             </InputGroup>
           </Form.Group>
 
-          {/* Recurring Donation Option */}
-          <Form.Check
-            type="checkbox"
-            label="Make this a recurring donation"
-            name="isRecurring"
-            checked={formData.isRecurring}
-            onChange={handleChange}
-            style={styles.recurringOption}
-          />
-
-          <Form.Group controlId="donationMessage">
-            <Form.Label>Message (Optional)</Form.Label>
-            <InputGroup>
-              <Form.Control
-                as="textarea"
-                rows={3}
-                placeholder="Say something"
-                name="donationMessage"
-                value={formData.donationMessage}
-                onChange={handleChange}
-              />
-            </InputGroup>
+          <Form.Group style={styles.formGroup}>
+            <Form.Label>Payment Method</Form.Label>
+            <Form.Control as="select" name="paymentMethod" value={formData.paymentMethod} onChange={handleChange} required>
+              <option value="">Select Payment Method</option>
+              <option value="UPI">UPI</option>
+              <option value="Credit Card">Credit Card</option>
+              <option value="Debit Card">Debit Card</option>
+              <option value="Net Banking">Net Banking</option>
+            </Form.Control>
           </Form.Group>
-        </Form>
 
-        {donationStatus && <p style={{ color: '#28a745' }}>{donationStatus}</p>}
+          <Form.Group controlId="donationMessage" style={styles.formGroup}>
+            <Form.Label>Donation Message (Optional)</Form.Label>
+            <Form.Control as="textarea" rows={3} name="donationMessage" value={formData.donationMessage} onChange={handleChange} />
+          </Form.Group>
+
+          <Form.Group style={styles.checkboxGroup}>
+            <Form.Check type="checkbox" label="Make this a recurring donation" name="isRecurring" checked={formData.isRecurring} onChange={handleChange} />
+          </Form.Group>
+
+          {donationStatus && (
+            <motion.p style={styles.donationStatus} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }}>
+              {donationStatus}
+            </motion.p>
+          )}
+
+          <motion.button
+            className="btn btn-success"
+            style={styles.donateButton}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={handleDonate}
+          >
+            <FontAwesomeIcon icon={faCreditCard} /> Donate Now
+          </motion.button>
+        </motion.div>
       </Modal.Body>
-
-      <Modal.Footer>
-        <Button variant="secondary" onClick={onClose}>
-          <FontAwesomeIcon icon={faTimes} /> Close
-        </Button>
-        <Button
-          variant="success"
-          onClick={handleDonate}
-          style={styles.donateButton}
-          onMouseEnter={(e) => e.target.style.transform = styles.donateButtonHover.transform}
-          onMouseLeave={(e) => e.target.style.transform = 'none'}
-        >
-          <FontAwesomeIcon icon={faDonate} /> Donate Now
-        </Button>
-      </Modal.Footer>
-
-      {/* Social Sharing Button */}
-      <Button variant="primary" style={styles.socialButton} onClick={() => alert('Share your donation on social media!')}>
-        Share Your Donation
-      </Button>
     </Modal>
   );
+};
+
+// Enhanced CSS Styles
+const styles = {
+  modalHeader: {
+    background: 'linear-gradient(to right, #007bff, #0056b3)',
+    color: 'white',
+    textAlign: 'center',
+  },
+  iconTitle: {
+    marginRight: '10px',
+  },
+  modalBody: {
+    padding: '20px',
+    borderRadius: '10px',
+  },
+  amountButtons: {
+    display: 'flex',
+    justifyContent: 'space-around',
+    marginBottom: '15px',
+  },
+  amountButton: {
+    width: '80px',
+    borderRadius: '20px',
+    transition: 'all 0.3s ease-in-out',
+  },
+  image: {
+    width: '100%',
+    height: 'auto',
+    marginBottom: '15px',
+    borderRadius: '10px',
+  },
+  formGroup: {
+    marginBottom: '15px',
+  },
+  checkboxGroup: {
+    marginBottom: '10px',
+  },
+  donationStatus: {
+    textAlign: 'center',
+    fontWeight: 'bold',
+    color: 'green',
+    marginTop: '10px',
+  },
+  donateButton: {
+    width: '100%',
+    padding: '10px',
+    fontSize: '18px',
+    borderRadius: '8px',
+    transition: 'all 0.3s ease-in-out',
+  },
 };
 
 export default DonateForm;

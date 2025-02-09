@@ -20,6 +20,7 @@ import Campaigns from './components/Campaign';
 import Logistics from './components/Logistics';
 import DonationForm from './components/DonateForm';
 import ContactSupport from './components/ContactSupport';
+import DonationHistory from './components/DonationHistory';
 function App() {
   const [isDonorLoggedIn, setIsDonorLoggedIn] = useState(
     localStorage.getItem('isDonorLoggedIn') === 'true'
@@ -62,6 +63,7 @@ function App() {
         <Route path="/donor/campaigns" element={<Campaigns/>}/>
         <Route path="/donor/donate" element={<DonationForm/>}/>
         <Route path="/donor/support" element={<ContactSupport/>}/>
+        <Route path="/donor/history" element={<DonationHistory />} />
         {/* <Route path="/logistics/deliveries" element={<LogisticDeliveries />} />
         <Route path="/logistics/dashboard" element={< LogisticDashboard/>}/> */}
       </Routes>
