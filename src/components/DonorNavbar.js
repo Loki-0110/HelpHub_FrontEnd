@@ -41,7 +41,7 @@ const DonorNavbar = ({ logout }) => {
           </Link>
         </li>
         <li className="nav-item">
-          <Link className="nav-link text-white" to="/donor/contact">
+          <Link className="nav-link text-white" to="/donor/support">
             <i className="fas fa-envelope"></i> Contact Support
           </Link>
         </li>

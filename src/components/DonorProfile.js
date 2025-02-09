@@ -1,100 +1,185 @@
-import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
-import axios from 'axios'; // Import axios
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faEnvelope, faUser, faEdit, faShareAlt } from '@fortawesome/free-solid-svg-icons';
-import { Donor_url } from './Service';
+import React, { useEffect, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import axios from "axios";
+import { Donor_url } from "./Service";
+import DonorNavbar from "./DonorNavbar";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faEnvelope, faUser, faEdit, faShareAlt, faAward, faMoon, faSun, faClock } from "@fortawesome/free-solid-svg-icons";
+import "bootstrap/dist/css/bootstrap.min.css";
+import { motion } from "framer-motion"; // Animation Library
 
 const DonorProfile = () => {
-  const [donor, setDonor] = useState(null); // State to store donor data
+  const [donor, setDonor] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [darkMode, setDarkMode] = useState(false);
+  const [currentTime, setCurrentTime] = useState(new Date());
 
-  // Fetch donor data when component mounts
+  const navigate = useNavigate();
+
   useEffect(() => {
-    axios.get(`${Donor_url}/profile`, { withCredentials: true }) // withCredentials ensures the session cookie is sent
-      .then(response => {
-        setDonor(response.data); // Update state with donor data from backend
+    axios
+      .get(`${Donor_url}/profile`, { withCredentials: true })
+      .then((response) => {
+        setDonor(response.data);
+        setLoading(false);
       })
-      .catch(error => {
-        console.error("There was an error fetching the donor data!", error);
+      .catch((error) => {
+        console.error("Error fetching donor data:", error);
+        setLoading(false);
+        navigate("/login");
       });
-  }, []); // Empty dependency array means this effect runs only once when the component mounts
 
-  if (!donor) {
-    return <div>Loading...</div>; // Display loading until data is fetched
-  }
+    // Update time every second
+    const interval = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [navigate]);
+
+  if (loading) return <div style={styles.loading}>Loading...</div>;
+  if (!donor) return <div style={styles.errorMessage}>Profile not found or unauthorized access.</div>;
 
   return (
-    <div className="d-flex flex-column min-vh-100">
-      <div className="sidebar bg-dark text-white p-3">
-        {/* Add your sidebar content here */}
-      </div>
+    <div className={`d-flex ${darkMode ? "bg-dark text-light" : "bg-light text-dark"}`}>
+      <DonorNavbar logout={() => navigate("/")} />
 
-      <div className="content flex-grow-1" style={{ marginLeft: '250px', padding: '20px', width: 'calc(100% - 250px)' }}>
-        <div className="card">
-          <div className="profile-header bg-primary text-white p-5 text-center">
-            <h2>{donor ? `${donor.username}'s Profile` : "Profile Not Available"}</h2>
-            <img
-              src="https://via.placeholder.com/150"
-              alt="Profile Picture"
-              className="profile-image rounded-circle border-white"
-              style={{ width: "150px", height: "150px", border: "5px solid white" }}
+      <motion.div
+        initial={{ opacity: 0, y: 50 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6 }}
+        style={styles.profileContainer}
+      >
+        <div style={{ ...styles.profileCard, backgroundColor: darkMode ? "#222" : "#fff" }} className="shadow-lg p-4">
+          <div className="d-flex justify-content-between align-items-center">
+            <h2 style={styles.heading}>{donor.username}'s Profile</h2>
+            <FontAwesomeIcon
+              icon={darkMode ? faSun : faMoon}
+              style={{ cursor: "pointer", fontSize: "24px" }}
+              onClick={() => setDarkMode(!darkMode)}
             />
-            <h3>{donor.username}</h3>
-            <p><FontAwesomeIcon icon={faEnvelope} className="icon" /> {donor.email}</p>
           </div>
 
-          <div className="profile-content p-4 bg-white rounded shadow-sm">
-            <h5>Profile Details</h5>
-            <hr />
-            <div className="row mb-3">
-              <div className="col-md-6">
-                <strong><FontAwesomeIcon icon={faUser} className="icon" /> Username:</strong> <span>{donor.username}</span>
-              </div>
-              <div className="col-md-6">
-                <strong><FontAwesomeIcon icon={faEnvelope} className="icon" /> Email:</strong> <span>{donor.email}</span>
-              </div>
-            </div>
+          <p className="text-muted">
+            <FontAwesomeIcon icon={faEnvelope} className="me-2" /> {donor.email}
+          </p>
 
-            {/* Achievements Section */}
-            <div className="stat">
-              <h5>Achievements</h5>
-              <div className="badge">First Donation Made</div>
-              <div className="badge">Community Contributor</div>
-              <div className="badge">Top Donor of the Month</div>
+          <h5 style={styles.sectionTitle}>Profile Details</h5>
+          <hr />
+          <div className="row mb-3">
+            <div className="col-md-6">
+              <strong>
+                <FontAwesomeIcon icon={faUser} className="me-2" /> Username:
+              </strong>{" "}
+              {donor.username}
             </div>
+            <div className="col-md-6">
+              <strong>
+                <FontAwesomeIcon icon={faEnvelope} className="me-2" /> Email:
+              </strong>{" "}
+              {donor.email}
+            </div>
+          </div>
 
-            {/* Donation Score Section */}
-            <div className="stat">
-              <h5>Score</h5>
-              <p className="value" style={{ fontSize: "24px", fontWeight: "bold" }}>{donor.donationsCount}</p>
-              <small>Donations Made</small>
-              <div className="progress">
-                <div className="progress-bar" role="progressbar" style={{ width: '70%' }} aria-valuenow="70" aria-valuemin="0" aria-valuemax="100"></div>
-              </div>
-            </div>
+          <h5 style={styles.sectionTitle}>Achievements</h5>
+          <motion.div whileHover={{ scale: 1.1 }} className="badge bg-success text-white me-2" style={styles.badge}>
+            First Donation Made
+          </motion.div>
+          <motion.div whileHover={{ scale: 1.1 }} className="badge bg-info text-white me-2" style={styles.badge}>
+            Community Contributor
+          </motion.div>
+          <motion.div whileHover={{ scale: 1.1 }} className="badge bg-warning text-dark" style={styles.badge}>
+            Top Donor of the Month
+          </motion.div>
 
-            <div className="text-center">
-              <Link to="/edit-profile" className="btn btn-success">
-                <FontAwesomeIcon icon={faEdit} className="icon" /> Edit Profile
-              </Link>
-              <Link to="/share-profile" className="btn btn-success ml-3">
-                <FontAwesomeIcon icon={faShareAlt} className="icon" /> Share Profile
-              </Link>
-            </div>
+          <h5 className="mt-4" style={styles.sectionTitle}>Donation Score</h5>
+          <p style={styles.donationScore}>{donor.donationsCount}</p>
+          <div className="progress">
+            <motion.div
+              className="progress-bar progress-bar-striped progress-bar-animated bg-danger"
+              role="progressbar"
+              initial={{ width: "0%" }}
+              animate={{ width: `${Math.min(donor.donationsCount, 100)}%` }}
+              transition={{ duration: 1.5 }}
+              aria-valuenow={donor.donationsCount}
+              aria-valuemin="0"
+              aria-valuemax="100"
+            ></motion.div>
+          </div>
+
+          <h5 className="mt-4" style={styles.sectionTitle}>Donation Streak</h5>
+          <p style={styles.donationScore}>{donor.donationStreak} days</p>
+
+          <h5 className="mt-4" style={styles.sectionTitle}>Current Time</h5>
+          <p className="text-center">
+            <FontAwesomeIcon icon={faClock} className="me-2" /> {currentTime.toLocaleTimeString()}
+          </p>
+
+          <div className="text-center mt-4">
+            <Link to="/edit-profile" className="btn btn-primary me-2" style={styles.button}>
+              <FontAwesomeIcon icon={faEdit} className="me-2" /> Edit Profile
+            </Link>
+            <Link to="/share-profile" className="btn btn-secondary" style={styles.button}>
+              <FontAwesomeIcon icon={faShareAlt} className="me-2" /> Share Profile
+            </Link>
           </div>
         </div>
-      </div>
-
-      <footer className="footer py-4 bg-dark text-white text-center">
-        <p>&copy; 2024 HelpHub. All rights reserved.</p>
-        <p>
-          <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" className="fab fa-facebook" style={{ color: 'white' }}></a>
-          <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" className="text-white ml-2" style={{ fontSize: '15px' }}>X</a>
-          <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" className="fab fa-instagram ml-2" style={{ color: 'white' }}></a>
-        </p>
-      </footer>
+      </motion.div>
     </div>
   );
+};
+
+const styles = {
+  profileContainer: {
+    margin: "auto",
+    padding: "40px",
+    width: "100%",
+    maxWidth: "900px",
+  },
+  profileCard: {
+    borderRadius: "15px",
+    overflow: "hidden",
+    transition: "0.3s",
+    padding: "20px",
+  },
+  heading: {
+    fontWeight: "bold",
+  },
+  sectionTitle: {
+    color: "#007bff",
+    fontWeight: "bold",
+  },
+  badge: {
+    padding: "8px 12px",
+    fontSize: "14px",
+    borderRadius: "20px",
+    margin: "5px",
+    transition: "0.3s",
+    cursor: "pointer",
+  },
+  donationScore: {
+    fontSize: "32px",
+    fontWeight: "bold",
+    color: "#dc3545",
+  },
+  button: {
+    transition: "0.3s",
+    fontSize: "16px",
+    padding: "10px 15px",
+    borderRadius: "8px",
+  },
+  loading: {
+    textAlign: "center",
+    fontSize: "20px",
+    fontWeight: "bold",
+    color: "#007bff",
+  },
+  errorMessage: {
+    textAlign: "center",
+    fontSize: "18px",
+    fontWeight: "bold",
+    color: "#dc3545",
+  },
 };
 
 export default DonorProfile;

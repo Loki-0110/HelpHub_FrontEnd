@@ -18,8 +18,8 @@ import AboutUs from './components/AboutUs';
 import ContactUs from './components/ContactUs';
 import Campaigns from './components/Campaign';
 import Logistics from './components/Logistics';
-
-
+import DonationForm from './components/DonateForm';
+import ContactSupport from './components/ContactSupport';
 function App() {
   const [isDonorLoggedIn, setIsDonorLoggedIn] = useState(
     localStorage.getItem('isDonorLoggedIn') === 'true'
@@ -58,8 +58,10 @@ function App() {
         <Route path="/login" element={<DonorLogin onLogin={handleLogin} />} /> 
         <Route path="/dashboard" element={<DonorDashBoard />} />
         <Route path="donor/dash" element={<DonorDashBoard />} />
-        <Route path="/profile" element={<DonorProfile />} /> 
+        <Route path="profile" element={<DonorProfile />} /> 
         <Route path="/donor/campaigns" element={<Campaigns/>}/>
+        <Route path="/donor/donate" element={<DonationForm/>}/>
+        <Route path="/donor/support" element={<ContactSupport/>}/>
         {/* <Route path="/logistics/deliveries" element={<LogisticDeliveries />} />
         <Route path="/logistics/dashboard" element={< LogisticDashboard/>}/> */}
       </Routes>

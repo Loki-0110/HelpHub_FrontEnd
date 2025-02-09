@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom'; // Correct import for v6
 import axios from 'axios'; // Import Axios
 import Logimg from '../images/donorreg.jpg';
@@ -7,40 +7,30 @@ import { Donor_url } from './Service';
 const DonorLogin = ({ onLogin }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [registrationSuccess, setRegistrationSuccess] = useState(false);
-  const [error, setError] = useState(null); // For error handling
+  const [error, setError] = useState(null); // Now using error state
   const navigate = useNavigate(); // Replace useHistory with useNavigate
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Prepare the login data
-    const loginData = {
-      email: email,
-      password: password,
-    };
+    const loginData = { email, password };
 
     try {
-      // Make the API call to the backend (replace with your actual API endpoint)
-      const response = await axios.post(`${Donor_url}/login`, loginData);
+      const response = await axios.post(`${Donor_url}/login`, loginData, { withCredentials: true });
 
-      // Check for successful login (assuming a success flag in the response)
       if (response.status === 200) {
         console.log('Login Successful');
-        navigate('/dashboard'); // Use navigate to redirect
+        navigate('/dashboard'); // Redirect after login
       } else {
         setError('Invalid credentials, please try again');
       }
     } catch (err) {
-      // Handle error in case of request failure
       console.error('Login Error:', err);
       setError('An error occurred. Please try again later.');
     }
     onLogin();
   };
 
-  // Effect to hide the success popup after a few seconds
- 
   return (
     <div style={{ backgroundColor: '#eee' }}>
       <section className="vh-75">
@@ -52,6 +42,9 @@ const DonorLogin = ({ onLogin }) => {
                   <div className="row justify-content-center">
                     <div className="col-md-10 col-lg-6 col-xl-5 order-1 order-lg-1">
                       <p className="text-center h1 fw-bold mb-5 mx-1 mx-md-4 mt-4">Become a Helper</p>
+
+                      {/* Display error message */}
+                      {error && <p className="text-danger text-center">{error}</p>}
 
                       <form className="mx-1 mx-md-4" onSubmit={handleSubmit}>
                         {/* Email Field */}
@@ -98,17 +91,13 @@ const DonorLogin = ({ onLogin }) => {
 
                       {/* Register Link and Forgot Password */}
                       <div className="text-center">
-                        <p>
-                          Don't have an account? <a href="/signup">Sign up</a>
-                        </p>
-                        <p>
-                          <a href="/signup">Forgot Password?</a>
-                        </p>
+                        <p>Don't have an account? <a href="/signup">Sign up</a></p>
+                        <p><a href="/forgot-password">Forgot Password?</a></p>
                       </div>
                     </div>
 
                     <div className="col-md-10 col-lg-6 col-xl-7 d-flex align-items-center order-1 order-lg-2">
-                      <img src={Logimg} className="img-fluid" alt="Login image" />
+                      <img src={Logimg} className="img-fluid" alt="Donor registration" />
                     </div>
                   </div>
                 </div>
